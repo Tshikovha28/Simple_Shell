@@ -1,0 +1,50 @@
+#include "shell.h"
+
+#define BUFFER_SIZE 1024  // Adjust as needed
+static char buffer[BUFFER_SIZE];
+static int buf_index = 0;
+static int end_of_file = 0;
+
+/**
+ * **getline - reads a line from standard input
+ * Return: the line read, or NULL on failure or EOF
+ */
+char *getline(void) {
+    int bytes_read;
+
+    if (end_of_file) {
+        // Return NULL immediately if EOF was previously reached
+        return NULL;
+    }
+
+    // Check if any characters remain in the buffer from previous reads
+    if (buf_index > 0) {
+        char *line = strndup(buffer, buf_index);
+        buf_index = 0;
+        return line;
+    }
+
+    // Read characters into the buffer until a newline or EOF is encountered
+    while ((bytes_read = read(STDIN_FILENO, buffer + buf_index, BUFFER_SIZE - buf_index)) > 0) {
+        buf_index += bytes_read;
+
+        // Check for newline in the buffer
+        char *newline_ptr = memchr(buffer, '\n', buf_index);
+        if (newline_ptr) {
+            *newline_ptr = '\0';  // Terminate the string at the newline
+            char *line = strndup(buffer, newline_ptr - buffer);
+            buf_index = newline_ptr - buffer + 1; // Move remaining characters to the beginning of the buffer
+            return line;
+        }
+    }
+
+    // Handle EOF
+    if (bytes_read == 0) {
+        end_of_file = 1;
+        return NULL;
+    } else {
+        // Handle error
+        perror("read");
+        return NULL;
+    }
+}
